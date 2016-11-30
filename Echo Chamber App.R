@@ -43,6 +43,7 @@ server <- shinyServer(function(input, output) {
      token <- get("oauth_token", twitteR:::oauth_cache)
      token$cache()
      
+     
      user<-getUser("@chris_bail")
      user_fans<-user$getFriends()
      user_fans<-twListToDF((user_fans))
