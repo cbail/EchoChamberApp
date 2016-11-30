@@ -36,13 +36,16 @@ server <- shinyServer(function(input, output) {
    
    output$TwitterPlot <- renderPlot({
       
-     setup_twitter_oauth("0WOTlq9uxTuqrviYHK5dSrNXC", 
-                         "qpvR9L0TpTuWEHg6tCGHIdD6iFe3eWW7F3qBEeXWIbzipjsywv", 
-                       )
+     consumer_key <- "0WOTlq9uxTuqrviYHK5dSrNXC"
+     consumer_secret <- "qpvR9L0TpTuWEHg6tCGHIdD6iFe3eWW7F3qBEeXWIbzipjsywv"
+     access_token <- "964635660-TocibFk3cDmKmmP2bMYZYumRPnjT0IF4vLRXXCkl"
+     access_secret <- "oQwYnkCqFV2g7DVcBph8NyQfuUZj4zhSuZPoaJhI5fEnW"
      
-     token <- get("oauth_token", twitteR:::oauth_cache)
-     token$cache()
+     options(httr_oauth_cache = TRUE) # enable using a local file to cache OAuth access credentials between R sessions
+     setup_twitter_oauth(consumer_key, consumer_secret, access_token, access_secret)
      
+     
+  
      
      user<-getUser("@chris_bail")
      user_fans<-user$getFriends()
