@@ -1,0 +1,112 @@
+---
+title: "Echo Chamber App"
+date: "2/6/2017"
+output: html_document
+runtime: shiny
+---
+<style type="text/css">
+.shiny-frame{
+  width: 100%;
+  height: 1000px;
+}
+</style>
+
+
+```{r setup, echo=FALSE, message=FALSE, warning=FALSE, results='hide'}
+#
+# This is a Shiny web application. You can run the application by clicking
+# the 'Run App' button above.
+#
+# Find out more about building applications with Shiny here:
+#
+#    http://shiny.rstudio.com/
+#
+
+library(shiny)
+library(twitteR)
+library(ggplot2)
+
+# Load the master ideology dataset.
+scores<-read.csv("https://docs.google.com/spreadsheets/d/1iIkn_K3H5GpvOGn4GlIaB9HdKjuCw7_kZsHlku68xJg/pub?output=csv")
+
+# Setup conection with Twitter
+consumer_key <- "0WOTlq9uxTuqrviYHK5dSrNXC"
+consumer_secret <- "qpvR9L0TpTuWEHg6tCGHIdD6iFe3eWW7F3qBEeXWIbzipjsywv"
+access_token <- "964635660-TocibFk3cDmKmmP2bMYZYumRPnjT0IF4vLRXXCkl"
+access_secret <- "oQwYnkCqFV2g7DVcBph8NyQfuUZj4zhSuZPoaJhI5fEnW"
+
+options(httr_oauth_cache = TRUE) # enable using a local file to cache OAuth access credentials between R sessions
+setup_twitter_oauth(consumer_key, consumer_secret, access_token, access_secret)
+print("Setup done")
+```
+
+
+```{r app, echo=FALSE}
+# Define UI for application that draws a histogram
+ui <- shinyUI(fluidPage(
+   
+   # Sidebar with a slider input for number of bins 
+   sidebarLayout(
+      sidebarPanel(
+        textInput("term", "Enter your Twitter handle here:", value = "@chrisbail")
+      ),
+      # Show a plot of the generated distribution
+      mainPanel(
+         plotOutput("TwitterPlot"),
+         verbatimTextOutput("num"),
+         verbatimTextOutput("most_liberal"),
+         verbatimTextOutput("most_conservative"),
+         verbatimTextOutput("who")
+      )
+   )
+))
+
+# Define server logic required to draw a histogram
+server <- function(input, output, session){
+  get_followers_ideology <- reactive({
+    user<-getUser(input$term)
+    
+    user_fans<-user$getFriends()
+    user_fans<-twListToDF((user_fans))
+    followers_in_set<-scores[scores$twitter_handle %in% user_fans$screenName,]
+    followers_in_set
+  })
+  
+   output$TwitterPlot <- renderPlot({
+     followers_in_set <- get_followers_ideology()
+     users_ideology_score<-mean(followers_in_set$ideology_score)
+     
+     ggplot(scores, aes(x=ideology_score))+
+       geom_histogram(color="gray")+
+       geom_vline(xintercept=users_ideology_score, color = "red")+
+       geom_text(aes(0,users_ideology_score,label = "Your ideology score", vjust = -3),color="white")+
+       theme_minimal()+
+       xlab("liberal                                conservative")+
+       ylab("Number of Twitter Opinion Leaders") + ggtitle(paste("Ideological score of", input$term))
+   })
+   
+   output$num <- renderText({
+     d <- get_followers_ideology()
+     paste("You follow", length(d$ideology_score), "accounts in our dataset.")
+   })
+   
+   output$most_liberal <- renderText({
+     d <- get_followers_ideology()
+     paste("The most liberal: ", d$twitter_handle[which(d$ideology_score == min(d$ideology_score))])
+   })
+   
+   output$most_conservative <- renderText({
+     d <- get_followers_ideology()
+     paste("The most conservative: ", d$twitter_handle[which(d$ideology_score == max(d$ideology_score))])
+   })
+   
+   output$who <- renderText({
+     d <- get_followers_ideology()
+     paste("Who they are: ", paste(d$twitter_handle, collapse = ", "))
+   })
+}
+
+
+# Run the application 
+shinyApp(ui, server)
+```
