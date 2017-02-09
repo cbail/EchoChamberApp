@@ -48,7 +48,10 @@ ui <- shinyUI(fluidPage(
    # Sidebar with a slider input for number of bins 
    sidebarLayout(
       sidebarPanel(
-        textInput("term", "Enter your Twitter handle here:", value = "@chrisbail")
+        textInput("term", "Enter your Twitter handle here:", value = ""),
+        # add a submit button to delay the app from attempting to run
+        # before the user is finished typing (this also reduces lag)
+        submitButton("Submit")
       ),
       # Show a plot of the generated distribution
       mainPanel(
@@ -64,11 +67,35 @@ ui <- shinyUI(fluidPage(
 # Define server logic required to draw a histogram
 server <- function(input, output, session){
   get_followers_ideology <- reactive({
+     #req function prevents app from throwing error when loading without pre-given inputs
+    req(input$term) 
     user<-getUser(input$term)
-    
+    #the 'withProgress' functions below show a loading screen during each step
+    #although this first step takes way longer to complete than the message shows
+    #particularly if the user follows a lot of people
+    withProgress(message = 'getting user info',
+                 value = NULL, {
+                   
+                   Sys.sleep(0.75)
+                 })
     user_fans<-user$getFriends()
+    withProgress(message = 'finding friends',
+                 value = NULL, {
+                   
+                   Sys.sleep(0.75)
+                 })
     user_fans<-twListToDF((user_fans))
+    withProgress(message = "structuring friends data",
+                 value = NULL, {
+                   
+                   Sys.sleep(0.75)
+                 })
     followers_in_set<-scores[scores$twitter_handle %in% user_fans$screenName,]
+    withProgress(message = 'getting friends polit id scores',
+                 value = NULL, {
+                   
+                   Sys.sleep(0.75)
+                 })
     followers_in_set
   })
   
