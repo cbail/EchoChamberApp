@@ -49,8 +49,7 @@ ui <- shinyUI(fluidPage(
    sidebarLayout(
       sidebarPanel(
         textInput("term", "Enter your Twitter handle here:", value = ""),
-        #Survey Questions on Side Panel
-                selectInput("select", label = h5("Gender"), 
+        selectInput("select", label = h5("Gender"), 
         choices = list("Female" = 1, "Male" = 2, "Other" = 3), 
         selected = 1),
         selectInput("select", label = h5("Race"), 
@@ -68,7 +67,7 @@ ui <- shinyUI(fluidPage(
         sliderInput("slider1", label = div(h5("Political Ideology"), style='width:235px;',
                             div(style='float:left;', 'Very Liberal'), 
                             div(style='float:right;', 'Very Conservative')), min = 0, 
-        max = 10, value = 5), 
+        max = 10, value = 5),        
         # add a submit button to delay the app from attempting to run
         # before the user is finished typing (this also reduces lag)
         submitButton("Submit")
