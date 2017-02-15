@@ -20,3 +20,5 @@ post<-twListToDF(userTimeline(handle, n=1))$text # Get most recent post
 post<-paste("RT ","@",handle,":",post,sep="") # Put "RT" and source in the front
 post<-gsub('http.* *', '',post) # remove URLs if any (linked to the tweet itself) 
 tweet(post) # tweet 
+
+## Should this work?
