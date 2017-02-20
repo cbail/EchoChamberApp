@@ -1,3 +1,7 @@
+# Require the development version of TwitteR
+# library(devtools)
+# install_github("geoffjentry/twitteR", force = T)
+
 library(stringr)
 library(twitteR)
 library(ROAuth)
@@ -20,16 +24,15 @@ Login <- function(){
 }
 
 
-Retweet <- function(lowbound, upbound, N, retweet = T){
+Retweet <- function(num_retweet, lowbound, upbound, N, retweet = T){
   # Sample N handlers to retweet their most recent status.
-  handles<-sample(handleset$twitter_handle[which(handleset$ideology_score>lowbound & handleset$ideology_score<upbound)], 2) # choose handle (ideology>1)
-  # Store the retweeted statuses in a matrix.
-
+  handles <- as.vector(sample(handlerset$twitter_handle[which(handlerset$ideology_score>lowbound & handlerset$ideology_score<upbound)], num_retweet)) # choose handle (ideology>1)
+  # print(handles)
   for (i in 1:length(handles)){
     handle_info <- rep(NA, 5)
     names(handle_info) <- c("handle", "ScreenName", "status_id", "text", "time") # The first and second should equals. Just to cross-validate
-    
     handle <- as.character(handles[i])
+    #print(handle)
     status <- twListToDF(userTimeline(handle, n=1))
     status_c <- statusFactory$new(text=status$text, screenName=status$screenName, id=status$id) # convert the status into a S4 status class.
     if (retweet){
@@ -54,7 +57,7 @@ Scheduler <- function(){
 }
 
 Write_log <- function(handle_info){
-  write.table(retweeted_info, file = "tweet_bot_log.txt", quote=F, sep="\n", eol = "\n[ENDEND]\n", row.names=F, col.names=F, append=T)
+  write.table(handle_info, file = "tweet_bot_log.txt", quote=F, sep="\n", eol = "\n[ENDEND]\n", row.names=F, col.names=F, append=T)
 }
 
 Email_Notify <- function(retweeted){
@@ -72,7 +75,7 @@ Email_Notify <- function(retweeted){
 # Main 
 ############
 HANDLER_ADDRESS <- "https://docs.google.com/spreadsheets/d/1iIkn_K3H5GpvOGn4GlIaB9HdKjuCw7_kZsHlku68xJg/pub?output=csv"
-N_HANDLES_SAMPLE = 2
+N_HANDLES_SAMPLE = 1
 RETWEET <- T
 
 handlerset <- Load_data(HANDLER_ADDRESS) # Get Handler data
@@ -80,4 +83,4 @@ Login() # Login to Twitter Bot (add function to log into differnt bots later)
   
 # Retweet a sample of conservative accounts
 # Four parameters: lower bound of ideology, upper bound of ideology, Number of handles to sample, retweet or copy
-Retweet(1, Inf, N_HANDLES_SAMPLE, RETWEET) 
+Retweet(N_HANDLES_SAMPLE, 1, Inf, N_HANDLES_SAMPLE, RETWEET)
