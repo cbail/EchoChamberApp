@@ -33,21 +33,23 @@ Retweet <- function(num_retweet, lowbound, upbound, N, retweet = T){
     names(handle_info) <- c("handle", "ScreenName", "status_id", "text", "time") # The first and second should equals. Just to cross-validate
     handle <- as.character(handles[i])
     #print(handle)
-    status <- twListToDF(userTimeline(handle, n=1))
-    status_c <- statusFactory$new(text=status$text, screenName=status$screenName, id=status$id) # convert the status into a S4 status class.
-    if (retweet){
-      retweetStatus(status_c) # Retweet.  
-    } else{
-      status <- paste("RT ",handle,":",post,sep="") # Put "RT" and source in the front
-      # status <- paste("RT ","@",handle,":",post,sep="") # Put "RT" and source in the front
-      status <- gsub('http.* *', '',post) # remove URLs if any (linked to the tweet itself) 
-      tweet(status) # tweet 
+    if(!is.na(tryCatch(lookupUsers(handle),error=function(err) NA))){
+      status <- twListToDF(userTimeline(handle, n=1))
+      status_c <- statusFactory$new(text=status$text, screenName=status$screenName, id=status$id) # convert the status into a S4 status class.
+      if (retweet){
+        retweetStatus(status_c) # Retweet.  
+      } else{
+        status <- paste("RT ",handle,":",post,sep="") # Put "RT" and source in the front
+        # status <- paste("RT ","@",handle,":",post,sep="") # Put "RT" and source in the front
+        status <- gsub('http.* *', '',post) # remove URLs if any (linked to the tweet itself) 
+        tweet(status) # tweet 
+      }
+      time <- Sys.time()
+      handle_info <- c(handle, status_c$getScreenName(), status_c$getId(), gsub("\n", "", status_c$getText()), time)
+      Write_log(handle_info)
+      print(paste0("Retweeted ", i, " of ", length(handles))) # Check the content of the tweet. Email?
+      if (i < length(handles)) Sys.sleep(runif(1, 10, 20)) # Stop, to avoid 403 error
     }
-    time <- Sys.time()
-    handle_info <- c(handle, status_c$getScreenName(), status_c$getId(), gsub("\n", "", status_c$getText()), time)
-    Write_log(handle_info)
-    print(paste0("Retweeted ", i, " of ", length(handles))) # Check the content of the tweet. Email?
-    if (i < length(handles)) Sys.sleep(runif(1, 10, 20)) # Stop, to avoid 403 error
   }
   # TODO: add some error-handling mechanism (e.g. 403 error)
 }
