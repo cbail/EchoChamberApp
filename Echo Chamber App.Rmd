@@ -25,6 +25,15 @@ runtime: shiny
 library(shiny)
 library(twitteR)
 library(ggplot2)
+library(googlesheets)
+
+# Register the googlesheet for storing data
+surveyresults <- gs_key('1XdEisuvIo5EAD0mH0wMTwAWd8oatmlVRY4fQummQ918')
+  
+# Function for storing google data
+save_data_gsheets <- function(data) {
+    surveyresults <- surveyresults %>% gs_add_row(input = data)
+}
 
 # Load the master ideology dataset.
 scores<-read.csv("https://docs.google.com/spreadsheets/d/1iIkn_K3H5GpvOGn4GlIaB9HdKjuCw7_kZsHlku68xJg/pub?output=csv")
@@ -50,27 +59,27 @@ ui <- shinyUI(fluidPage(
       sidebarPanel(
         textInput("term", "Enter your Twitter handle here:", value = ""),
         #Survey Questions on Side Panel
-                selectInput("select", label = h5("Gender"), 
+                selectInput("select_gender", label = h5("Gender"), 
         choices = list("Female" = 1, "Male" = 2, "Other" = 3), 
         selected = 1),
-        selectInput("select", label = h5("Race"), 
+        selectInput("select_race", label = h5("Race"), 
         choices = list("American Indian" = 1, "Asian" = 2, "Black" = 3,
                        "Hispanic" = 4, "Multiracial" = 5, "White" = 6,
                        "Other" = 7), 
         selected = 1),
-        sliderInput("slider1", label = h5("Age"), min = 18, 
+        sliderInput("slider1_age", label = h5("Age"), min = 18, 
         max = 99, value = 60),
-        selectInput("select", label = h5("Gross Annual Income"), 
+        selectInput("select_income", label = h5("Gross Annual Income"), 
         choices = list("$0-10,000" = 1, "$10,001-20,000" = 2, "$20,001-30,000" = 3,
                        "$30,001-40,000" = 4, "$40,001-50,000" = 5, "$50,001-70,000" = 6,
                        "$70,001-100,000" = 7, "$100,001-200,000" = 8, "$200,001 or more" = 9), 
         selected = 1),
-        selectInput("select", label = h5("Highest Level of Education"), 
+        selectInput("select_edu", label = h5("Highest Level of Education"), 
         choices = list("No HS Diploma" = 1, "HS Diploma or GED" = 2, "Some College" = 3,
                        "Associate's Degree" = 4, "Bachelor's Degree" = 5, "Master's Degree" = 6,
                        "PhD, MD, JD, or other Advanced Professional Degree" = 7), 
         selected = 1),
-        sliderInput("slider1", label = div(h5("Political Ideology"), style='width:235px;',
+        sliderInput("slider1_polideo", label = div(h5("Political Ideology"), style='width:235px;',
                             div(style='float:left;', 'Very Liberal'), 
                             div(style='float:right;', 'Very Conservative')), min = 0, 
         max = 10, value = 5), 
@@ -92,7 +101,7 @@ ui <- shinyUI(fluidPage(
 # Define server logic required to draw a histogram
 server <- function(input, output, session){
   get_followers_ideology <- reactive({
-     #req function prevents app from throwing error when loading without pre-given inputs
+    #req function prevents app from throwing error when loading without pre-given inputs
     req(input$term) 
     user<-getUser(input$term)
     #the 'withProgress' functions below show a loading screen during each step
@@ -122,6 +131,14 @@ server <- function(input, output, session){
                    Sys.sleep(0.75)
                  })
     followers_in_set
+    surveydata <- c(input$term, 
+                    input$select_gender, 
+                    input$select_race,
+                    input$slider1_age,
+                    input$select_income,
+                    input$select_edu, 
+                    input$slider1_polideo)
+   save_data_gsheets(surveydata)
   })
   
    output$TwitterPlot <- renderPlot({
