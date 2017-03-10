@@ -1,0 +1,164 @@
+---
+title: "Echo Chamber App"
+date: "2/6/2017"
+output: html_document
+runtime: shiny
+---
+<style type="text/css">
+.shiny-frame{
+  width: 100%;
+  height: 1000px;
+}
+</style>
+
+
+```{r setup, echo=FALSE, message=FALSE, warning=FALSE, results='hide'}
+#
+# This is a Shiny web application. You can run the application by clicking
+# the 'Run App' button above.
+#
+# Find out more about building applications with Shiny here:
+#
+#    http://shiny.rstudio.com/
+#
+
+library(shiny)
+library(twitteR)
+library(ggplot2)
+
+# Load the master ideology dataset.
+scores<-read.csv("https://docs.google.com/spreadsheets/d/1iIkn_K3H5GpvOGn4GlIaB9HdKjuCw7_kZsHlku68xJg/pub?output=csv")
+
+# Setup conection with Twitter
+consumer_key <- "0WOTlq9uxTuqrviYHK5dSrNXC"
+consumer_secret <- "qpvR9L0TpTuWEHg6tCGHIdD6iFe3eWW7F3qBEeXWIbzipjsywv"
+access_token <- "964635660-TocibFk3cDmKmmP2bMYZYumRPnjT0IF4vLRXXCkl"
+access_secret <- "oQwYnkCqFV2g7DVcBph8NyQfuUZj4zhSuZPoaJhI5fEnW"
+
+options(httr_oauth_cache = TRUE) # enable using a local file to cache OAuth access credentials between R sessions
+setup_twitter_oauth(consumer_key, consumer_secret, access_token, access_secret)
+print("Setup done")
+```
+
+
+```{r app, echo=FALSE}
+# Define UI for application that draws a histogram
+ui <- shinyUI(fluidPage(
+   
+   # Sidebar with a slider input for number of bins 
+   sidebarLayout(
+      sidebarPanel(
+        textInput("term", "Enter your Twitter handle here:", value = ""),
+        #Survey Questions on Side Panel
+                selectInput("select", label = h5("Gender"), 
+        choices = list("Female" = 1, "Male" = 2, "Other" = 3), 
+        selected = 1),
+        selectInput("select", label = h5("Race"), 
+        choices = list("American Indian" = 1, "Asian" = 2, "Black" = 3,
+                       "Hispanic" = 4, "Multiracial" = 5, "White" = 6,
+                       "Other" = 7), 
+        selected = 1),
+        sliderInput("slider1", label = h5("Age"), min = 18, 
+        max = 99, value = 60),
+        selectInput("select", label = h5("Gross Annual Income"), 
+        choices = list("$0-10,000" = 1, "$10,001-20,000" = 2, "$20,001-30,000" = 3,
+                       "$30,001-40,000" = 4, "$40,001-50,000" = 5, "$50,001-70,000" = 6,
+                       "$70,001-100,000" = 7, "$100,001-200,000" = 8, "$200,001 or more" = 9), 
+        selected = 1),
+        selectInput("select", label = h5("Highest Level of Education"), 
+        choices = list("No HS Diploma" = 1, "HS Diploma or GED" = 2, "Some College" = 3,
+                       "Associate's Degree" = 4, "Bachelor's Degree" = 5, "Master's Degree" = 6,
+                       "PhD, MD, JD, or other Advanced Professional Degree" = 7), 
+        selected = 1),
+        sliderInput("slider1", label = div(h5("Political Ideology"), style='width:235px;',
+                            div(style='float:left;', 'Very Liberal'), 
+                            div(style='float:right;', 'Very Conservative')), min = 0, 
+        max = 10, value = 5), 
+        # add a submit button to delay the app from attempting to run
+        # before the user is finished typing (this also reduces lag)
+        submitButton("Submit")
+      ),
+      # Show a plot of the generated distribution
+      mainPanel(
+         plotOutput("TwitterPlot"),
+         verbatimTextOutput("num"),
+         verbatimTextOutput("most_liberal"),
+         verbatimTextOutput("most_conservative"),
+         verbatimTextOutput("who")
+      )
+   )
+))
+
+# Define server logic required to draw a histogram
+server <- function(input, output, session){
+  get_followers_ideology <- reactive({
+     #req function prevents app from throwing error when loading without pre-given inputs
+    req(input$term) 
+    user<-getUser(input$term)
+    #the 'withProgress' functions below show a loading screen during each step
+    #although this first step takes way longer to complete than the message shows
+    #particularly if the user follows a lot of people
+    withProgress(message = 'getting user info',
+                 value = NULL, {
+                   
+                   Sys.sleep(0.75)
+                 })
+    user_fans<-user$getFriends()
+    withProgress(message = 'finding friends',
+                 value = NULL, {
+                   
+                   Sys.sleep(0.75)
+                 })
+    user_fans<-twListToDF((user_fans))
+    withProgress(message = "structuring friends data",
+                 value = NULL, {
+                   
+                   Sys.sleep(0.75)
+                 })
+    followers_in_set<-scores[scores$twitter_handle %in% user_fans$screenName,]
+    withProgress(message = 'getting friends polit id scores',
+                 value = NULL, {
+                   
+                   Sys.sleep(0.75)
+                 })
+    followers_in_set
+  })
+  
+   output$TwitterPlot <- renderPlot({
+     followers_in_set <- get_followers_ideology()
+     users_ideology_score<-mean(followers_in_set$ideology_score)
+     
+     ggplot(scores, aes(x=ideology_score))+
+       geom_histogram(color="gray")+
+       geom_vline(xintercept=users_ideology_score, color = "red")+
+       geom_text(aes(0,users_ideology_score,label = "Your ideology score", vjust = -3),color="white")+
+       theme_minimal()+
+       xlab("liberal                                conservative")+
+       ylab("Number of Twitter Opinion Leaders") + ggtitle(paste("Ideology score of", input$term))
+   })
+   
+   output$num <- renderText({
+     d <- get_followers_ideology()
+     paste("You follow", length(d$ideology_score), "Twitter opinion leaders in our dataset.")
+   })
+   
+   output$most_liberal <- renderText({
+     d <- get_followers_ideology()
+     paste("The most liberal: ", d$twitter_handle[which(d$ideology_score == min(d$ideology_score))])
+   })
+   
+   output$most_conservative <- renderText({
+     d <- get_followers_ideology()
+     paste("The most conservative: ", d$twitter_handle[which(d$ideology_score == max(d$ideology_score))])
+   })
+   
+   output$who <- renderText({
+     d <- get_followers_ideology()
+     paste("From the most liberal to the most conservative, they are: ", paste(d$twitter_handle[order(d$ideology_score)], collapse = ", "))
+   })
+}
+
+
+# Run the application 
+shinyApp(ui, server)
+```
